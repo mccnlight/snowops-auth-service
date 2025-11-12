@@ -70,10 +70,6 @@ type CreateUserInput struct {
 }
 
 func (s *AdminService) CreateOrganization(ctx context.Context, actorID uuid.UUID, input CreateOrganizationInput) (*CreateOrganizationResult, error) {
-	if err := validateCreateOrganizationInput(input); err != nil {
-		return nil, err
-	}
-
 	actor, err := s.users.FindByID(ctx, actorID.String())
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
@@ -92,6 +88,10 @@ func (s *AdminService) CreateOrganization(ctx context.Context, actorID uuid.UUID
 	}
 
 	if err := s.ensureParentOrganization(ctx, actor.OrganizationID, actor.Role); err != nil {
+		return nil, err
+	}
+
+	if err := validateCreateOrganizationInput(input, adminRole); err != nil {
 		return nil, err
 	}
 
@@ -131,10 +131,6 @@ func (s *AdminService) CreateOrganization(ctx context.Context, actorID uuid.UUID
 }
 
 func (s *AdminService) CreateUser(ctx context.Context, actorID uuid.UUID, input CreateUserInput) (*UserInfo, error) {
-	if err := validateCreateUserInput(input); err != nil {
-		return nil, err
-	}
-
 	actor, err := s.users.FindByID(ctx, actorID.String())
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
@@ -145,6 +141,10 @@ func (s *AdminService) CreateUser(ctx context.Context, actorID uuid.UUID, input 
 
 	targetRole, err := resolveUserCreation(actor.Role)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := validateCreateUserInput(input, targetRole); err != nil {
 		return nil, err
 	}
 
@@ -162,43 +162,42 @@ func (s *AdminService) CreateUser(ctx context.Context, actorID uuid.UUID, input 
 		IsActive:       true,
 	}
 
+	var login, password, phone string
 	if input.Login != nil {
-		login := strings.TrimSpace(*input.Login)
-		if login != "" {
-			exists, err := s.users.ExistsByLogin(ctx, login)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, ErrConflict
-			}
-			user.Login = &login
-		}
+		login = strings.TrimSpace(*input.Login)
 	}
-
-	if input.Phone != nil {
-		phone := strings.TrimSpace(*input.Phone)
-		if phone != "" {
-			exists, err := s.users.ExistsByPhone(ctx, phone)
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				return nil, ErrConflict
-			}
-			user.Phone = &phone
-		}
-	}
-
 	if input.Password != nil {
-		password := strings.TrimSpace(*input.Password)
-		if password != "" {
-			hash, err := s.password.Hash(password)
-			if err != nil {
-				return nil, err
-			}
-			user.PasswordHash = &hash
+		password = strings.TrimSpace(*input.Password)
+	}
+	if input.Phone != nil {
+		phone = strings.TrimSpace(*input.Phone)
+	}
+
+	if login != "" {
+		exists, err := s.users.ExistsByLogin(ctx, login)
+		if err != nil {
+			return nil, err
 		}
+		if exists {
+			return nil, ErrConflict
+		}
+		hash, err := s.password.Hash(password)
+		if err != nil {
+			return nil, err
+		}
+		user.Login = &login
+		user.PasswordHash = &hash
+	}
+
+	if phone != "" {
+		exists, err := s.users.ExistsByPhone(ctx, phone)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, ErrConflict
+		}
+		user.Phone = &phone
 	}
 
 	if err := s.users.Create(ctx, user); err != nil {
@@ -227,7 +226,18 @@ func (s *AdminService) buildUserFromAdminInput(ctx context.Context, orgID uuid.U
 		phone = strings.TrimSpace(*input.Phone)
 	}
 
-	if login == "" && phone == "" {
+	switch role {
+	case model.UserRoleAkimatAdmin:
+		if login == "" || password == "" {
+			return nil, ErrInvalidInput
+		}
+	default:
+		if login != "" || password != "" {
+			return nil, ErrInvalidInput
+		}
+	}
+
+	if role != model.UserRoleAkimatAdmin && phone == "" {
 		return nil, ErrInvalidInput
 	}
 
@@ -253,9 +263,6 @@ func (s *AdminService) buildUserFromAdminInput(ctx context.Context, orgID uuid.U
 
 	var passwordHash *string
 	if login != "" {
-		if password == "" {
-			return nil, ErrInvalidInput
-		}
 		hash, err := s.password.Hash(password)
 		if err != nil {
 			return nil, err
@@ -317,17 +324,17 @@ func toOrganizationInfo(org *model.Organization) OrganizationInfo {
 	}
 }
 
-func validateCreateOrganizationInput(input CreateOrganizationInput) error {
+func validateCreateOrganizationInput(input CreateOrganizationInput, adminRole model.UserRole) error {
 	if strings.TrimSpace(input.Name) == "" {
 		return ErrInvalidInput
 	}
-	if err := validateCreateOrganizationAdminInput(input.Admin); err != nil {
+	if err := validateCreateOrganizationAdminInput(input.Admin, adminRole); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateCreateOrganizationAdminInput(input CreateOrganizationAdminInput) error {
+func validateCreateOrganizationAdminInput(input CreateOrganizationAdminInput, role model.UserRole) error {
 	login := ""
 	if input.Login != nil {
 		login = strings.TrimSpace(*input.Login)
@@ -341,16 +348,26 @@ func validateCreateOrganizationAdminInput(input CreateOrganizationAdminInput) er
 		phone = strings.TrimSpace(*input.Phone)
 	}
 
-	if login == "" && phone == "" {
+	switch role {
+	case model.UserRoleAkimatAdmin:
+		if login == "" || password == "" {
+			return ErrInvalidInput
+		}
+	case model.UserRoleTooAdmin, model.UserRoleContractorAdmin, model.UserRoleDriver:
+		if login != "" || password != "" {
+			return ErrInvalidInput
+		}
+		if phone == "" {
+			return ErrInvalidInput
+		}
+	default:
 		return ErrInvalidInput
 	}
-	if login != "" && password == "" {
-		return ErrInvalidInput
-	}
+
 	return nil
 }
 
-func validateCreateUserInput(input CreateUserInput) error {
+func validateCreateUserInput(input CreateUserInput, role model.UserRole) error {
 	login := ""
 	if input.Login != nil {
 		login = strings.TrimSpace(*input.Login)
@@ -364,11 +381,25 @@ func validateCreateUserInput(input CreateUserInput) error {
 		phone = strings.TrimSpace(*input.Phone)
 	}
 
-	if login == "" && phone == "" {
-		return ErrInvalidInput
-	}
-	if login != "" && password == "" {
-		return ErrInvalidInput
+	switch role {
+	case model.UserRoleDriver:
+		if login != "" || password != "" {
+			return ErrInvalidInput
+		}
+		if phone == "" {
+			return ErrInvalidInput
+		}
+	case model.UserRoleAkimatAdmin:
+		if login == "" || password == "" {
+			return ErrInvalidInput
+		}
+	default:
+		if login == "" && phone == "" {
+			return ErrInvalidInput
+		}
+		if login != "" && password == "" {
+			return ErrInvalidInput
+		}
 	}
 
 	return nil
