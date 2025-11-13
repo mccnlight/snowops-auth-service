@@ -1,11 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
-
-	"github.com/nurpe/snowops-auth/internal/model"
 )
 
 type HTTPConfig struct {
@@ -68,8 +67,6 @@ func Load() (*Config, error) {
 
 	v.AutomaticEnv()
 
-	setDefaults(v)
-
 	_ = v.ReadInConfig()
 
 	cfg := &Config{
@@ -109,35 +106,37 @@ func Load() (*Config, error) {
 		},
 	}
 
+	if err := validate(cfg); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 
-func setDefaults(v *viper.Viper) {
-	v.SetDefault("APP_ENV", "development")
-	v.SetDefault("HTTP_HOST", "0.0.0.0")
-	v.SetDefault("HTTP_PORT", 8080)
-
-	v.SetDefault("DB_DSN", "postgres://postgres:postgres@localhost:5431/auth_db?sslmode=disable")
-	v.SetDefault("DB_MAX_OPEN_CONNS", 25)
-	v.SetDefault("DB_MAX_IDLE_CONNS", 10)
-	v.SetDefault("DB_CONN_MAX_LIFETIME", time.Hour)
-
-	v.SetDefault("JWT_ACCESS_SECRET", "supersecret")
-	v.SetDefault("JWT_ACCESS_TTL", time.Minute*15)
-	v.SetDefault("JWT_REFRESH_TTL", time.Hour*24*30)
-
-	v.SetDefault("SMS_CODE_TTL", time.Minute*5)
-	v.SetDefault("SMS_CODE_LENGTH", 6)
-	v.SetDefault("SMS_DAILY_LIMIT", 10)
-
-	v.SetDefault("ADMIN_SEED_ENABLED", true)
-	v.SetDefault("ADMIN_LOGIN", "admin")
-	v.SetDefault("ADMIN_PASSWORD", "admin123")
-	v.SetDefault("ADMIN_PHONE", "")
-	v.SetDefault("ADMIN_ORG_NAME", "Default Akimat")
-	v.SetDefault("ADMIN_ORG_BIN", "")
-
-	v.SetDefault("REG_DEFAULT_ROLE", string(model.UserRoleDriver))
-	v.SetDefault("REG_DEFAULT_ORG_NAME", "Default Contractor")
-	v.SetDefault("REG_DEFAULT_ORG_BIN", "")
+func validate(cfg *Config) error {
+	if cfg.DB.DSN == "" {
+		return fmt.Errorf("DB_DSN is required")
+	}
+	if cfg.JWT.AccessSecret == "" {
+		return fmt.Errorf("JWT_ACCESS_SECRET is required")
+	}
+	if cfg.JWT.AccessTTL == 0 {
+		return fmt.Errorf("JWT_ACCESS_TTL is required")
+	}
+	if cfg.JWT.RefreshTTL == 0 {
+		return fmt.Errorf("JWT_REFRESH_TTL is required")
+	}
+	if cfg.HTTP.Host == "" {
+		return fmt.Errorf("HTTP_HOST is required")
+	}
+	if cfg.HTTP.Port == 0 {
+		return fmt.Errorf("HTTP_PORT is required")
+	}
+	if cfg.SMS.CodeTTL == 0 {
+		return fmt.Errorf("SMS_CODE_TTL is required")
+	}
+	if cfg.SMS.CodeLength == 0 {
+		return fmt.Errorf("SMS_CODE_LENGTH is required")
+	}
+	return nil
 }
