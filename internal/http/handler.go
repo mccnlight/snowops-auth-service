@@ -12,16 +12,14 @@ import (
 )
 
 type Handler struct {
-	authService  *service.AuthService
-	adminService *service.AdminService
-	log          zerolog.Logger
+	authService *service.AuthService
+	log         zerolog.Logger
 }
 
-func NewHandler(authService *service.AuthService, adminService *service.AdminService, log zerolog.Logger) *Handler {
+func NewHandler(authService *service.AuthService, log zerolog.Logger) *Handler {
 	return &Handler{
-		authService:  authService,
-		adminService: adminService,
-		log:          log,
+		authService: authService,
+		log:         log,
 	}
 }
 
@@ -34,11 +32,6 @@ func (h *Handler) Register(r *gin.Engine, authMiddleware gin.HandlerFunc) {
 	auth.POST("/refresh", h.refresh)
 	auth.POST("/logout", h.logout)
 	auth.GET("/me", authMiddleware, h.me)
-
-	admin := r.Group("/admin")
-	admin.Use(authMiddleware)
-	admin.POST("/organizations", h.createOrganization)
-	admin.POST("/users", h.createUser)
 }
 
 type loginRequest struct {
@@ -61,27 +54,6 @@ type refreshRequest struct {
 
 type logoutRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
-}
-
-type createOrganizationRequest struct {
-	Name         string                         `json:"name" binding:"required"`
-	BIN          string                         `json:"bin"`
-	HeadFullName string                         `json:"head_full_name"`
-	Address      string                         `json:"address"`
-	Phone        string                         `json:"phone"`
-	Admin        createOrganizationAdminRequest `json:"admin" binding:"required"`
-}
-
-type createOrganizationAdminRequest struct {
-	Login    *string `json:"login"`
-	Password *string `json:"password"`
-	Phone    *string `json:"phone"`
-}
-
-type createUserRequest struct {
-	Login    *string `json:"login"`
-	Password *string `json:"password"`
-	Phone    *string `json:"phone"`
 }
 
 func (h *Handler) login(c *gin.Context) {
@@ -193,73 +165,6 @@ func (h *Handler) me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, successResponse(info))
-}
-
-func (h *Handler) createOrganization(c *gin.Context) {
-	var req createOrganizationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err.Error()))
-		return
-	}
-
-	claims, ok := middleware.GetClaims(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, errorResponse("missing token claims"))
-		return
-	}
-
-	result, err := h.adminService.CreateOrganization(
-		c.Request.Context(),
-		claims.UserID,
-		service.CreateOrganizationInput{
-			Name:         req.Name,
-			BIN:          req.BIN,
-			HeadFullName: req.HeadFullName,
-			Address:      req.Address,
-			Phone:        req.Phone,
-			Admin: service.CreateOrganizationAdminInput{
-				Login:    req.Admin.Login,
-				Password: req.Admin.Password,
-				Phone:    req.Admin.Phone,
-			},
-		},
-	)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusCreated, successResponse(result))
-}
-
-func (h *Handler) createUser(c *gin.Context) {
-	var req createUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err.Error()))
-		return
-	}
-
-	claims, ok := middleware.GetClaims(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, errorResponse("missing token claims"))
-		return
-	}
-
-	result, err := h.adminService.CreateUser(
-		c.Request.Context(),
-		claims.UserID,
-		service.CreateUserInput{
-			Login:    req.Login,
-			Password: req.Password,
-			Phone:    req.Phone,
-		},
-	)
-	if err != nil {
-		h.handleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusCreated, successResponse(result))
 }
 
 func (h *Handler) handleError(c *gin.Context, err error) {

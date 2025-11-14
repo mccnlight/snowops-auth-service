@@ -32,6 +32,7 @@ func NewAdminService(
 }
 
 type CreateOrganizationInput struct {
+	Type         model.OrganizationType
 	Name         string
 	BIN          string
 	HeadFullName string
@@ -78,10 +79,17 @@ func (s *AdminService) CreateOrganization(ctx context.Context, actorID uuid.UUID
 		return nil, err
 	}
 
-	targetType, adminRole, err := resolveOrganizationCreation(actor.Role)
+	targetType := input.Type
+	if targetType == "" {
+		targetType = model.OrganizationTypeKgu
+	}
+
+	adminRole, err := resolveOrganizationCreation(actor.Role, targetType)
 	if err != nil {
 		return nil, err
 	}
+
+	input.Type = targetType
 
 	if actor.OrganizationID == uuid.Nil {
 		return nil, ErrHierarchyViolation
@@ -298,8 +306,12 @@ func (s *AdminService) ensureParentOrganization(ctx context.Context, orgID uuid.
 		if org.Type != model.OrganizationTypeAkimat {
 			return ErrHierarchyViolation
 		}
-	case model.UserRoleKguAdmin:
+	case model.UserRoleKguZkhAdmin:
 		if org.Type != model.OrganizationTypeKgu {
+			return ErrHierarchyViolation
+		}
+	case model.UserRoleTooAdmin:
+		if org.Type != model.OrganizationTypeToo {
 			return ErrHierarchyViolation
 		}
 	case model.UserRoleContractorAdmin, model.UserRoleDriver:
@@ -328,6 +340,11 @@ func validateCreateOrganizationInput(input CreateOrganizationInput, adminRole mo
 	if strings.TrimSpace(input.Name) == "" {
 		return ErrInvalidInput
 	}
+	switch input.Type {
+	case model.OrganizationTypeKgu, model.OrganizationTypeToo, model.OrganizationTypeContractor:
+	default:
+		return ErrInvalidInput
+	}
 	if err := validateCreateOrganizationAdminInput(input.Admin, adminRole); err != nil {
 		return err
 	}
@@ -353,7 +370,7 @@ func validateCreateOrganizationAdminInput(input CreateOrganizationAdminInput, ro
 		if login == "" || password == "" {
 			return ErrInvalidInput
 		}
-	case model.UserRoleKguAdmin, model.UserRoleContractorAdmin, model.UserRoleDriver:
+	case model.UserRoleKguZkhAdmin, model.UserRoleTooAdmin, model.UserRoleContractorAdmin, model.UserRoleDriver:
 		if login != "" || password != "" {
 			return ErrInvalidInput
 		}
@@ -405,15 +422,21 @@ func validateCreateUserInput(input CreateUserInput, role model.UserRole) error {
 	return nil
 }
 
-func resolveOrganizationCreation(role model.UserRole) (model.OrganizationType, model.UserRole, error) {
-	switch role {
+func resolveOrganizationCreation(actorRole model.UserRole, targetType model.OrganizationType) (model.UserRole, error) {
+	switch actorRole {
 	case model.UserRoleAkimatAdmin:
-		return model.OrganizationTypeKgu, model.UserRoleKguAdmin, nil
-	case model.UserRoleKguAdmin:
-		return model.OrganizationTypeContractor, model.UserRoleContractorAdmin, nil
-	default:
-		return "", "", ErrPermissionDenied
+		switch targetType {
+		case model.OrganizationTypeKgu:
+			return model.UserRoleKguZkhAdmin, nil
+		case model.OrganizationTypeToo:
+			return model.UserRoleTooAdmin, nil
+		}
+	case model.UserRoleKguZkhAdmin:
+		if targetType == model.OrganizationTypeContractor {
+			return model.UserRoleContractorAdmin, nil
+		}
 	}
+	return "", ErrPermissionDenied
 }
 
 func resolveUserCreation(role model.UserRole) (model.UserRole, error) {

@@ -21,14 +21,13 @@ import (
 )
 
 type AuthService struct {
-	users         repository.UserRepository
-	organizations repository.OrganizationRepository
-	sessions      repository.UserSessionRepository
-	smsCodes      repository.SmsCodeRepository
-	password      password.Hasher
-	smsSender     sms.Sender
-	tokens        *token.Manager
-	cfg           *config.Config
+	users     repository.UserRepository
+	sessions  repository.UserSessionRepository
+	smsCodes  repository.SmsCodeRepository
+	password  password.Hasher
+	smsSender sms.Sender
+	tokens    *token.Manager
+	cfg       *config.Config
 }
 
 type AuthMeta struct {
@@ -54,7 +53,6 @@ type UserInfo struct {
 
 func NewAuthService(
 	users repository.UserRepository,
-	organizations repository.OrganizationRepository,
 	sessions repository.UserSessionRepository,
 	smsCodes repository.SmsCodeRepository,
 	password password.Hasher,
@@ -63,14 +61,13 @@ func NewAuthService(
 	cfg *config.Config,
 ) *AuthService {
 	return &AuthService{
-		users:         users,
-		organizations: organizations,
-		sessions:      sessions,
-		smsCodes:      smsCodes,
-		password:      password,
-		smsSender:     smsSender,
-		tokens:        tokens,
-		cfg:           cfg,
+		users:     users,
+		sessions:  sessions,
+		smsCodes:  smsCodes,
+		password:  password,
+		smsSender: smsSender,
+		tokens:    tokens,
+		cfg:       cfg,
 	}
 }
 

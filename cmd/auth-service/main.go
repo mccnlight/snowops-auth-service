@@ -31,7 +31,6 @@ func main() {
 	}
 
 	userRepo := repository.NewUserRepository(database)
-	orgRepo := repository.NewOrganizationRepository(database)
 	smsRepo := repository.NewSmsCodeRepository(database)
 	sessionRepo := repository.NewUserSessionRepository(database)
 
@@ -41,7 +40,6 @@ func main() {
 
 	authService := service.NewAuthService(
 		userRepo,
-		orgRepo,
 		sessionRepo,
 		smsRepo,
 		passwordHasher,
@@ -50,13 +48,7 @@ func main() {
 		cfg,
 	)
 
-	adminService := service.NewAdminService(
-		userRepo,
-		orgRepo,
-		passwordHasher,
-	)
-
-	handler := httphandler.NewHandler(authService, adminService, appLogger)
+	handler := httphandler.NewHandler(authService, appLogger)
 	authMiddleware := middleware.Auth(tokenManager)
 	router := httphandler.NewRouter(handler, authMiddleware, cfg.Environment)
 
