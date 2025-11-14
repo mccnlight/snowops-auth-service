@@ -81,7 +81,7 @@ func (s *AdminService) CreateOrganization(ctx context.Context, actorID uuid.UUID
 
 	targetType := input.Type
 	if targetType == "" {
-		targetType = model.OrganizationTypeKgu
+		targetType = model.OrganizationTypeKguZkh
 	}
 
 	adminRole, err := resolveOrganizationCreation(actor.Role, targetType)
@@ -307,7 +307,7 @@ func (s *AdminService) ensureParentOrganization(ctx context.Context, orgID uuid.
 			return ErrHierarchyViolation
 		}
 	case model.UserRoleKguZkhAdmin:
-		if org.Type != model.OrganizationTypeKgu {
+		if org.Type != model.OrganizationTypeKguZkh {
 			return ErrHierarchyViolation
 		}
 	case model.UserRoleTooAdmin:
@@ -341,7 +341,7 @@ func validateCreateOrganizationInput(input CreateOrganizationInput, adminRole mo
 		return ErrInvalidInput
 	}
 	switch input.Type {
-	case model.OrganizationTypeKgu, model.OrganizationTypeToo, model.OrganizationTypeContractor:
+	case model.OrganizationTypeKguZkh, model.OrganizationTypeToo, model.OrganizationTypeContractor:
 	default:
 		return ErrInvalidInput
 	}
@@ -426,7 +426,7 @@ func resolveOrganizationCreation(actorRole model.UserRole, targetType model.Orga
 	switch actorRole {
 	case model.UserRoleAkimatAdmin:
 		switch targetType {
-		case model.OrganizationTypeKgu:
+		case model.OrganizationTypeKguZkh:
 			return model.UserRoleKguZkhAdmin, nil
 		case model.OrganizationTypeToo:
 			return model.UserRoleTooAdmin, nil

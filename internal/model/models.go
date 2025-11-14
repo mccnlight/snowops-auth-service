@@ -11,7 +11,7 @@ type OrganizationType string
 
 const (
 	OrganizationTypeAkimat     OrganizationType = "AKIMAT"
-	OrganizationTypeKgu        OrganizationType = "KGU"
+	OrganizationTypeKguZkh     OrganizationType = "KGU_ZKH"
 	OrganizationTypeToo        OrganizationType = "TOO"
 	OrganizationTypeContractor OrganizationType = "CONTRACTOR"
 )
