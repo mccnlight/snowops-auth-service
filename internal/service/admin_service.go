@@ -298,8 +298,8 @@ func (s *AdminService) ensureParentOrganization(ctx context.Context, orgID uuid.
 		if org.Type != model.OrganizationTypeAkimat {
 			return ErrHierarchyViolation
 		}
-	case model.UserRoleTooAdmin:
-		if org.Type != model.OrganizationTypeToo {
+	case model.UserRoleKguAdmin:
+		if org.Type != model.OrganizationTypeKgu {
 			return ErrHierarchyViolation
 		}
 	case model.UserRoleContractorAdmin, model.UserRoleDriver:
@@ -353,7 +353,7 @@ func validateCreateOrganizationAdminInput(input CreateOrganizationAdminInput, ro
 		if login == "" || password == "" {
 			return ErrInvalidInput
 		}
-	case model.UserRoleTooAdmin, model.UserRoleContractorAdmin, model.UserRoleDriver:
+	case model.UserRoleKguAdmin, model.UserRoleContractorAdmin, model.UserRoleDriver:
 		if login != "" || password != "" {
 			return ErrInvalidInput
 		}
@@ -408,8 +408,8 @@ func validateCreateUserInput(input CreateUserInput, role model.UserRole) error {
 func resolveOrganizationCreation(role model.UserRole) (model.OrganizationType, model.UserRole, error) {
 	switch role {
 	case model.UserRoleAkimatAdmin:
-		return model.OrganizationTypeToo, model.UserRoleTooAdmin, nil
-	case model.UserRoleTooAdmin:
+		return model.OrganizationTypeKgu, model.UserRoleKguAdmin, nil
+	case model.UserRoleKguAdmin:
 		return model.OrganizationTypeContractor, model.UserRoleContractorAdmin, nil
 	default:
 		return "", "", ErrPermissionDenied

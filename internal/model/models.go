@@ -11,7 +11,7 @@ type OrganizationType string
 
 const (
 	OrganizationTypeAkimat     OrganizationType = "AKIMAT"
-	OrganizationTypeToo        OrganizationType = "TOO"
+	OrganizationTypeKgu        OrganizationType = "KGU"
 	OrganizationTypeContractor OrganizationType = "CONTRACTOR"
 )
 
@@ -19,7 +19,7 @@ type UserRole string
 
 const (
 	UserRoleAkimatAdmin     UserRole = "AKIMAT_ADMIN"
-	UserRoleTooAdmin        UserRole = "TOO_ADMIN"
+	UserRoleKguAdmin        UserRole = "KGU_ADMIN"
 	UserRoleContractorAdmin UserRole = "CONTRACTOR_ADMIN"
 	UserRoleDriver          UserRole = "DRIVER"
 )
