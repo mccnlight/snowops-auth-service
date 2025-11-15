@@ -74,6 +74,9 @@ func NewAuthService(
 func (s *AuthService) Login(ctx context.Context, login, pass string, meta AuthMeta) (*AuthResult, error) {
 	user, err := s.users.FindByLogin(ctx, login)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user, err = s.users.FindByPhone(ctx, login)
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
