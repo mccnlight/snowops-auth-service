@@ -72,7 +72,7 @@ type UserSession struct {
 	ClientIP         string    `gorm:"type:varchar(45)"`
 	CreatedAt        time.Time `gorm:"autoCreateTime"`
 
-	User User `gorm:"foreignKey:UserID"`
+	User User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 func (u *User) BeforeCreate(_ *gorm.DB) error {

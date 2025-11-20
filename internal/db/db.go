@@ -28,7 +28,8 @@ func New(cfg *config.Config, log zerolog.Logger) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(dbCfg.DSN), &gorm.Config{
-		Logger: gormLog,
+		Logger:      gormLog,
+		PrepareStmt: false, // Disable prepared statements to avoid "cached plan must not change result type" errors
 	})
 	if err != nil {
 		return nil, err
