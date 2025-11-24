@@ -21,7 +21,9 @@ type UserRole string
 const (
 	UserRoleAkimatAdmin     UserRole = "AKIMAT_ADMIN"
 	UserRoleKguZkhAdmin     UserRole = "KGU_ZKH_ADMIN"
-	UserRoleTooAdmin        UserRole = "TOO_ADMIN"
+	UserRoleTooAdmin        UserRole = "TOO_ADMIN" // Deprecated: use LANDFILL_ADMIN
+	UserRoleLandfillAdmin   UserRole = "LANDFILL_ADMIN"
+	UserRoleLandfillUser    UserRole = "LANDFILL_USER"
 	UserRoleContractorAdmin UserRole = "CONTRACTOR_ADMIN"
 	UserRoleDriver          UserRole = "DRIVER"
 )
