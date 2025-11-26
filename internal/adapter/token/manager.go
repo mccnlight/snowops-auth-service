@@ -14,6 +14,7 @@ type Claims struct {
 	UserID    uuid.UUID      `json:"sub"`
 	Role      model.UserRole `json:"role"`
 	OrgID     uuid.UUID      `json:"org_id"`
+	DriverID  *uuid.UUID     `json:"driver_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -33,6 +34,7 @@ func (m *Manager) GenerateAccessToken(user *model.User, sessionID uuid.UUID, ttl
 		UserID:    user.ID,
 		Role:      user.Role,
 		OrgID:     user.OrganizationID,
+		DriverID:  user.DriverID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
