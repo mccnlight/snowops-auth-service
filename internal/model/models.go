@@ -20,7 +20,9 @@ type UserRole string
 
 const (
 	UserRoleAkimatAdmin     UserRole = "AKIMAT_ADMIN"
+	UserRoleAkimatUser      UserRole = "AKIMAT_USER"
 	UserRoleKguZkhAdmin     UserRole = "KGU_ZKH_ADMIN"
+	UserRoleKguZkhUser      UserRole = "KGU_ZKH_USER"
 	UserRoleTooAdmin        UserRole = "TOO_ADMIN" // Deprecated: use LANDFILL_ADMIN
 	UserRoleLandfillAdmin   UserRole = "LANDFILL_ADMIN"
 	UserRoleLandfillUser    UserRole = "LANDFILL_USER"
